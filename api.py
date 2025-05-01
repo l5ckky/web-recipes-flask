@@ -9,12 +9,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import time
 import re
+
+
 # "https://api.food.ru/content/v2/search?product_ids=&material=recipe&query=&sort=&max_per_page=40&format=json"
 
 def get_ingredient_by_title(name):
     print("Выполняется запрос на получение ингредиента...")
-    requests.options(timeout=5, url=f"https://api.food.ru/content/v2/search/products?query={name}")
-    response = requests.get(f"https://api.food.ru/content/v2/search/products?query={name}")
+    url_ingr = f"https://api.food.ru/content/v2/search/products?query={name}"
+    requests.options(timeout=5, url=url_ingr)
+    response = requests.get(url_ingr)
     if response.status_code == 200:
         data = response.json()
         # print(data)
@@ -24,7 +27,7 @@ def get_ingredient_by_title(name):
             "url_part": data['products'][0]["url_part"]
         }
     else:
-        raise 'Нет ответа от сервера'
+        raise f'Код ошибки {response.status_code}'
 
 
 def setup_drivers():
@@ -32,71 +35,66 @@ def setup_drivers():
     chrome_options = Options()
 
     # Базовые оптимизации
-    chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080")
-
-    # Важно: ВКЛЮЧАЕМ загрузку изображений (ранее было отключено)
-    # chrome_options.add_argument("--blink-settings=imagesEnabled=true")
-
-    # Отключаем lazy loading
-    chrome_options.add_experimental_option(
-        "prefs", {
-            "profile.managed_default_content_settings.images": 2,  # Разрешаем изображения
-            "profile.default_content_setting_values.lazy_load_enabled": 0  # Отключаем lazy load
-        }
-    )
+    options = [
+       "--headless",
+       "--disable-gpu",
+       "--no-sandbox",
+       "--disable-dev-shm-usage",
+       "--window-size=1920,1080",
+       "--blink-settings=imagesEnabled=true"
+    ]
+    for o in options:
+        chrome_options.add_argument(o)
 
     chrome_options.page_load_strategy = 'eager'  # Не ждем полной загрузки страницы
-
+    print("Инициализация браузера...")
     driver = webdriver.Chrome(options=chrome_options)
 
     # Настройка таймаутов
     # driver.set_page_load_timeout(10)  # Максимальное время загрузки страницы
-    driver.implicitly_wait(5)  # Неявное ожидание элементов
+    # driver.implicitly_wait(5)  # Неявное ожидание элементов
 
     return driver
 
 
-def scroll_page(driver, scroll_pause_time=0, max_scrolls=10):
+def scroll_page(driver, scroll_pause_time=0.2, max_scrolls=20):
     """Проскроллить страницу до конца для загрузки всего контента"""
     last_height = driver.execute_script("return document.body.scrollHeight")
-    # time.sleep(scroll_pause_time)
+    time.sleep(scroll_pause_time*3)
 
-    for a in range(1, 10):
+    for a in range(1, max_scrolls):
         # Скроллим до низа
-        driver.execute_script(f"window.scrollTo(0, (document.body.scrollHeight/10)*{a});")
+        driver.execute_script(f"window.scrollTo(0, (document.body.scrollHeight/{max_scrolls})*{a});")
 
         # Ждем загрузки
-        # time.sleep(scroll_pause_time)
+        time.sleep(scroll_pause_time)
 
 
 def scrape_recipes(ingredients):
     try:
-        print("Настройка браузера...")
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Режим без графического интерфейса
-        # service = Service('путь/к/chromedriver')  # Укажите путь к chromedriver
-        print("Инициализация браузера...")
-        driver = setup_drivers()
+        if len(ingredients) == 0:
+            raise Exception('Выберите хотя бы один ингредиент')
 
         recipes = []
         ids_ingredients = {}
         for ingredient in ingredients:
-            ids_ingredients[ingredient] = get_ingredient_by_title(ingredient)['id']
+            ids_ingredients[ingredient] = int(get_ingredient_by_title(ingredient))
+            time.sleep(0.1)
 
         recipes_url = f"https://food.ru/search?product_ids={
         '&product_ids='.join([str(x) for x in ids_ingredients.values()])}&material=recipe&query=&sort="
         recipes_url_api = f"https://api.food.ru/content/v2/search?product_ids={
         '&product_ids='.join([str(x) for x in ids_ingredients.values()])
         }&material=recipe&query=&sort=&max_per_page=20&format=json"
+        print("Настройка браузера...")
+        driver = setup_drivers()
         print("Выполнение запроса к food.ru...")
         # response = requests.get(recipes_url)
-        driver.get(recipes_url)
-        print("Запрос выполнен. Прокрутка страницы...")
-
+        try:
+            driver.get(recipes_url)
+            print("Запрос выполнен. Прокрутка страницы...")
+        except Exception as err:
+            raise Exception('Не удалось выполнить запрос к food.ru')
         scroll_page(driver)
         print("Прокрутка завершена. Сохранение страницы...")
         # time.sleep(2)
@@ -106,15 +104,21 @@ def scrape_recipes(ingredients):
             f.write(page)
             f.close()
 
+        driver.close()
+
         print("Страница получена... Запуск парсера...")
         soup = BeautifulSoup(page, 'html.parser')
 
         # cards = soup.find("script", {'id': "__NEXT_DATA__", "type": "application/json"})
         # data = json.loads(cards.text)
         # print(data)
-        data = requests.get(recipes_url_api).json()
-        print(data)
-        raw_recipes = data['materials']
+        try:
+            requests.options(timeout=7, url=recipes_url_api)
+            data = requests.get(recipes_url_api).json()
+            print(data)
+            raw_recipes = data['materials']
+        except Exception:
+            raise Exception('Не удалось выполнить запрос к api.food.ru')
         # print(*recipes, sep="\n-----=-----\n")
         # "https://cdn.food.ru/unsigned/fit/750/563/ce/0/czM6Ly9tZWRpYS9waWN0dXJlcy8yMDI0MDQwNS9NM3hVZG0uanBlZw.webp"
         # "https://cdn.food.ru/unsigned/fit/750/563/ce/0/czM6Ly9tZWRpYS9waWN0dXJlcy8yMDI1MDMzMC9uMk1veXouanBlZw.webp"
@@ -129,6 +133,8 @@ def scrape_recipes(ingredients):
             total_cooking_time = recipe["total_cooking_time"]
             difficulty_level = recipe["difficulty_level"]
             product_titles: list = recipe["product_titles"]
+
+            # разделяем ингредиенты
             products = []
             product = ''
             contain_name = False
@@ -146,12 +152,17 @@ def scrape_recipes(ingredients):
                 else:
                     product += let
 
-            a_pattern = re.compile(rf"/recipes/{recipe_id}-*")
-            img_url = re.search(r'https://cdn\.food\.ru/unsigned/fit/1200/900/\S*\.webp',
-                            soup.find('a', {'href': a_pattern})
-                            .find('source', {'type': 'image/webp'})
-                            .get("srcset"))[0]
-
+            # найти блок с изображением по ссылке
+            try:
+                a_pattern = re.compile(rf"/recipes/{recipe_id}-*")  # паттерн для поиска ссылки на рецепт
+                a = soup.find('a', {'href': a_pattern})
+                b = a.find('source', {'type': 'image/webp'})  # ищем нужный источник картинки
+                c = b.get("srcset", '')  # получаем его
+                img_url = re.search(r'https://cdn\.food\.ru/unsigned/fit/1200/900/\S*\.webp', c)[
+                    0]  # берем нужную ссылку
+            except Exception as e:
+                print(e)
+                img_url = "https://ik.imagekit.io/vn49p9jmnnv7g/konte/placeholder__yPgLyFqc.jpg"
             print('Получен рецепт ' + main_title)
             recipe = {
                 'title': main_title,
@@ -163,11 +174,13 @@ def scrape_recipes(ingredients):
             }
             recipes.append(recipe)
         print('Все рецепты получены! Вывод результата', len(recipes))
+
         return {'recipes': recipes, 'msg': f"Найдено {len(recipes)} рецептов."}
+    except requests.exceptions.Timeout:
+        return {'recipes': [], 'msg': 'Долго нет ответа от сервера'}
     except Exception as err:
         print("Выполнено с ошибкой:", err)
         return {'recipes': [], 'msg': err}
-
 
 # ingredients = ['картошка','курица']
 # print(scrape_recipes(ingredients))
