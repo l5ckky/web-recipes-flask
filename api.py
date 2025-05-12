@@ -10,8 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import re
 
-
-# "  "
+# "https://api.food.ru/content/v2/search?product_ids=&material=recipe&query=&sort=&max_per_page=40&format=json"
 
 def get_ingredient_by_title(name):
     print("Выполняется запрос на получение ингредиента...")
@@ -78,7 +77,7 @@ def scrape_recipes(ingredients):
         recipes = []
         ids_ingredients = {}
         for ingredient in ingredients:
-            ids_ingredients[ingredient] = 177
+            ids_ingredients[ingredient] = int(get_ingredient_by_title(ingredient))
             time.sleep(0.1)
 
         recipes_url = f"https://food.ru/search?product_ids={
