@@ -10,7 +10,6 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import re
 
-
 # "https://api.food.ru/content/v2/search?product_ids=&material=recipe&query=&sort=&max_per_page=40&format=json"
 
 def get_ingredient_by_title(name):
