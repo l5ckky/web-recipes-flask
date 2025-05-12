@@ -1,45 +1,54 @@
-{% extends "layout.html" %}
-{% block content %}
-    <div class="content-section">
-        <form method="POST" action="">
-            {{ form.hidden_tag() }}
-            <fieldset class="form-group">
-                <legend class="border-bottom mb-4">Log In</legend>
-                <div class="form-group">
-                    {{ form.email.label(class="form-control-label") }}
-                    {% if form.email.errors %}
-                        {{ form.email(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in form.email.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        {{ form.email(class="form-control form-control-lg") }}
-                    {% endif %}
-                </div>
-                <div class="form-group">
-                    {{ form.password.label(class="form-control-label") }}
-                    {% if form.password.errors %}
-                        {{ form.password(class="form-control form-control-lg is-invalid") }}
-                        <div class="invalid-feedback">
-                            {% for error in form.password.errors %}
-                                <span>{{ error }}</span>
-                            {% endfor %}
-                        </div>
-                    {% else %}
-                        {{ form.password(class="form-control form-control-lg") }}
-                    {% endif %}
-                </div>
-            </fieldset>
-            <div class="form-group">
-                {{ form.submit(class="btn btn-outline-info") }}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+<div class="container mx-auto max-w-md py-12">
+    <div class="bg-white rounded-xl shadow-md overflow-hidden p-8">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Вход в систему</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 p-3 rounded-lg bg-{{ 'red' if category == 'danger' else 'green' }}-100 text-{{ 'red' if category == 'danger' else 'green' }}-800">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="mb-4">
+                <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Имя пользователя</label>
+                <input type="text" id="username" name="username" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
             </div>
+
+            <div class="mb-6">
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+                <input type="password" id="password" name="password" required
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+            </div>
+
+            <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition">
+                Войти
+            </button>
         </form>
+
+        <div class="mt-4 text-center">
+            <p class="text-gray-600">Нет аккаунта? <a href="{{ url_for('register') }}" class="text-blue-600 hover:text-blue-800">Зарегистрироваться</a></p>
+        </div>
     </div>
-    <div class="border-top pt-3">
-        <small class="text-muted">
-            Need An Account? <a class="ml-2" href="{{ url_for('register') }}">Sign Up</a>
-        </small>
-    </div>
-{% endblock content %}
+</div>
+</body>
+</html>
