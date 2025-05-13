@@ -98,13 +98,13 @@ def register():
 
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
         user = User(username=username, email=email, password=hashed_password)
-        db.session.add(user)
+        # db.session.add(user)
         try:
-            db.session.commit()
+            # db.session.commit()
             flash('Регистрация прошла успешно! Теперь вы можете войти.', 'success')
             return redirect(url_for('login'))
         except:
-            db.session.rollback()
+            # db.session.rollback()
             flash('Это имя пользователя или email уже заняты', 'danger')
     return render_template('register.html')
 
@@ -133,7 +133,7 @@ def logout():
     return redirect(url_for('index'))
 
 @app.route('/search', methods=['POST'])
-@login_required
+# @login_required
 def search():
     if request.method == 'POST':
         data = list(filter(lambda x: x[0], request.values.listvalues()))

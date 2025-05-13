@@ -78,14 +78,11 @@ def scrape_recipes(ingredients):
         recipes = []
         ids_ingredients = {}
         for ingredient in ingredients:
-            ids_ingredients[ingredient] = 177
+            ids_ingredients[ingredient] = int(get_ingredient_by_title(ingredient)["id"])
             time.sleep(0.1)
 
-        recipes_url = f"https://food.ru/search?product_ids={
-        '&product_ids='.join([str(x) for x in ids_ingredients.values()])}&material=recipe&query=&sort="
-        recipes_url_api = f"https://api.food.ru/content/v2/search?product_ids={
-        '&product_ids='.join([str(x) for x in ids_ingredients.values()])
-        }&material=recipe&query=&sort=&max_per_page=20&format=json"
+        recipes_url = f"https://food.ru/search?product_ids={'&product_ids='.join([str(x) for x in ids_ingredients.values()])}&material=recipe&query=&sort="
+        recipes_url_api = f"https://api.food.ru/content/v2/search?product_ids={'&product_ids='.join([str(x) for x in ids_ingredients.values()])}&material=recipe&query=&sort=&max_per_page=20&format=json"
         print("Настройка браузера...")
         driver = setup_drivers()
         print("Выполнение запроса к food.ru...")
