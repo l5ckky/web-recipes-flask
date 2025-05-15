@@ -28,7 +28,17 @@
         <a href="{{ url_for('index') }}" class="text-xl font-bold text-blue-600">Рецепты</a>
         <div class="flex items-center space-x-4">
             {% if current_user.is_authenticated %}
-                <span class="text-gray-700">Привет, {{ current_user.username }}!</span>
+                <div class="flex items-center space-x-2">
+                    {% if current_user.avatar %}
+                        <img src="{{ url_for('static', filename='uploads/avatars/' + current_user.avatar) }}"
+                             alt="Аватар" class="w-8 h-8 rounded-full object-cover">
+                    {% else %}
+                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium">
+                            {{ current_user.username[0]|upper }}
+                        </div>
+                    {% endif %}
+                    <span class="text-gray-700">Привет, {{ current_user.username }}!</span>
+                </div>
                 <a href="{{ url_for('logout') }}" class="px-4 py-2 text-blue-600 hover:text-blue-800">Выйти</a>
             {% else %}
                 <a href="{{ url_for('login') }}" class="px-4 py-2 text-blue-600 hover:text-blue-800">Войти</a>
@@ -50,21 +60,25 @@
         <form action="/search" method="POST">
             <div class="columns-3 gap-0 mb-8 ">
                 {% for category in ingredients %}
-                    <div class="p-2">
+                <div class="p-2">
                     <h3 class=" font-bold text-lg text-gray-800 mb-3 ">{{ category.category }}</h3>
                     <div class="space-y-2 {{ loop.cycle('py-3', 'break-after-column') }}">
-                    {% for ingredient in category.ingredients %}
-                            <div>
-                                <input type="checkbox" id="{% if ingredient|length == 2 %} {{ ingredient.0 }} {% else %} {{ ingredient }} {% endif %}" name="ingredients" value="{% if ingredient|length == 2 %} {{ ingredient.0 }} {% else %} {{ ingredient }} {% endif %}"
-                                       class="ingredient-checkbox hidden">
-                                <label for="{% if ingredient|length == 2 %} {{ ingredient.0 }} {% else %} {{ ingredient }} {% endif %}"
-                                       class="cursor-pointer flex items-center px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
-                                    {% if ingredient|length == 2 %} {{ ingredient.0 }} {% else %} {{ ingredient }} {% endif %}
-                                </label>
-                            </div>
-                    {% endfor %}
+                        {% for ingredient in category.ingredients %}
+                        <div>
+                            <input type="checkbox"
+                                   id="{% if ingredient|length == 2 %} {{ ingredient.0 }} {% else %} {{ ingredient }} {% endif %}"
+                                   name="ingredients"
+                                   value="{% if ingredient|length == 2 %} {{ ingredient.0 }} {% else %} {{ ingredient }} {% endif %}"
+                                   class="ingredient-checkbox hidden">
+                            <label for="{% if ingredient|length == 2 %} {{ ingredient.0 }} {% else %} {{ ingredient }} {% endif %}"
+                                   class="cursor-pointer flex items-center px-3 py-1 border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+                                {% if ingredient|length == 2 %} {{ ingredient.0 }} {% else %} {{ ingredient }} {% endif
+                                %}
+                            </label>
+                        </div>
+                        {% endfor %}
                     </div>
-                    </div>
+                </div>
                 {% endfor %}
             </div>
 

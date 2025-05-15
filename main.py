@@ -7,11 +7,18 @@ from bs4 import BeautifulSoup
 from time import sleep
 import api
 from werkzeug.security import generate_password_hash, check_password_hash
+import os
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+UPLOAD_FOLDER = 'static/uploads/avatars'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 2 * 1024 * 1024  # 2MB max
+
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -22,10 +29,15 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
+    avatar = db.Column(db.String(120), nullable=True)  # Добавляем поле для хранения пути к аватару
 
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 available_ingredients = [{'category': 'Овощи',
                          'ingredients': [
@@ -82,6 +94,7 @@ available_ingredients = [{'category': 'Овощи',
 def index():
     return render_template('index.html', ingredients=available_ingredients)
 
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
@@ -92,19 +105,29 @@ def register():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
 
+        # Проверка загруженного файла
+        avatar = None
+        if 'avatar' in request.files:
+            file = request.files['avatar']
+            if file and allowed_file(file.filename):
+                filename = secure_filename(f"{username}_{file.filename}")
+                os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                avatar = filename
+
         if password != confirm_password:
             flash('Пароли не совпадают', 'danger')
             return redirect(url_for('register'))
 
         hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-        user = User(username=username, email=email, password=hashed_password)
-        # db.session.add(user)
+        user = User(username=username, email=email, password=hashed_password, avatar=avatar)
+        db.session.add(user)
         try:
-            # db.session.commit()
+            db.session.commit()
             flash('Регистрация прошла успешно! Теперь вы можете войти.', 'success')
             return redirect(url_for('login'))
         except:
-            # db.session.rollback()
+            db.session.rollback()
             flash('Это имя пользователя или email уже заняты', 'danger')
     return render_template('register.html')
 
