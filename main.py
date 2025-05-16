@@ -126,7 +126,8 @@ def register():
             db.session.commit()
             flash('Регистрация прошла успешно! Теперь вы можете войти.', 'success')
             return redirect(url_for('login'))
-        except:
+        except Exception as e:
+            print(e)
             db.session.rollback()
             flash('Это имя пользователя или email уже заняты', 'danger')
     return render_template('register.html')
